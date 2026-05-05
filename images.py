@@ -129,17 +129,24 @@ def sample_new_cameras_interpolation(cam_positions, c2w, n_samples_interpolation
 
     new_positions = []
     new_orientations = []
+    seen_pairs = set()
 
     for i in range(N):
         for j in knn[i]:
+            j_idx = int(j.item())
+            pair = (min(i, j_idx), max(i, j_idx))
+            if pair in seen_pairs:
+                continue
+            seen_pairs.add(pair)
+
             ti = cam_positions[i]
-            tj = cam_positions[j]
+            tj = cam_positions[j_idx]
 
             for alpha in [0.25, 0.5, 0.75]:
                 if alpha == 0.5 or alpha == 0.25:
                     R_new = c2w[i, :3, :3]
                 else:
-                    R_new = c2w[j, :3, :3]
+                    R_new = c2w[j_idx, :3, :3]
                 new_positions.append((1 - alpha) * ti + alpha * tj)
                 new_orientations.append(R_new)
 
