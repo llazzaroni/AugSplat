@@ -114,7 +114,7 @@ python utils/prepare_vggt_dataset.py \
 
 3) step: now the datasets are ready. Train the ensembles of nerf models
 
-srun -A ls_polle -p gpuhe.4h --ntasks=1 --mem-per-cpu=4G --gpus=nvidia_geforce_rtx_4090:1 --time=04:00:00 --pty bash
+srun -A ls_polle -p gpuhe.4h --ntasks=1 --mem-per-cpu=4G --cpus-per-task=4 --gpus=nvidia_geforce_rtx_4090:1 --time=10:00:00 --pty bash
 
 DATA_ROOT="/cluster/scratch/rbollati/new_exp/360_v2"
 OUT_ROOT="/cluster/scratch/rbollati/new_exp"
@@ -191,65 +191,103 @@ optimal steps for treehill: 200
 
 tensorboard --logdir outputs/ensemble_1/depth-nerfacto/garden
 
-DATA_ROOT="/cluster/scratch/rbollati/new_exp/360_v2"
-OUT_ROOT="/cluster/scratch/rbollati/new_exp"
+4) step: query the nerf models and generate the augmented datasets.
 
-NUM_ENSEMBLE=5
-MAX_ITERS_RUN1=30001
-MAX_ITERS_OTHER=30001
-SAVE_EVERY=1000
-EVAL_EVERY=3000
+python images.py \
+  --model-roots /cluster/scratch/rbollati/new_exp/models_bicycle \
+  --checkpoint-step 800 \
+  --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/bicycle_sparse_vggt \
+  --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/bicycle_sparse_aug \
+  --tmp-root /cluster/home/rbollati/tmp \
+  --tau 1.5 \
+  --debug-plot-dir image_supervision \
+  --num-final-samples 200 \
+  --final-render-scale 0.125
 
-SCENES=(
-  room
-)
+python images.py \
+  --model-roots /cluster/scratch/rbollati/new_exp/models_bonsai \
+  --checkpoint-step 800 \
+  --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/bonsai_sparse_vggt \
+  --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/bonsai_sparse_aug \
+  --tmp-root /cluster/home/rbollati/tmp \
+  --tau 1.5 \
+  --debug-plot-dir image_supervision \
+  --num-final-samples 200 \
+  --final-render-scale 0.125
 
-for scene_name in "${SCENES[@]}"; do
-  dataset_dir="${DATA_ROOT}/${scene_name}_sparse_vggt"
-  model_root="${OUT_ROOT}/models_${scene_name}"
-  mkdir -p "${model_root}"
+python images.py \
+  --model-roots /cluster/scratch/rbollati/new_exp/models_counter \
+  --checkpoint-step 200 \
+  --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/counter_sparse_vggt \
+  --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/counter_sparse_aug \
+  --tmp-root /cluster/home/rbollati/tmp \
+  --tau 1.5 \
+  --debug-plot-dir image_supervision \
+  --num-final-samples 200 \
+  --final-render-scale 0.125
 
-  for i in $(seq 1 "${NUM_ENSEMBLE}"); do
-    run_dir="${model_root}/nerf_ensemble_${i}"
-    mkdir -p "${run_dir}"
-    cd "${run_dir}"
+python images.py \
+  --model-roots /cluster/scratch/rbollati/new_exp/models_flowers \
+  --checkpoint-step 2400 \
+  --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/flowers_sparse_vggt \
+  --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/flowers_sparse_aug \
+  --tmp-root /cluster/home/rbollati/tmp \
+  --tau 1.5 \
+  --debug-plot-dir image_supervision \
+  --num-final-samples 200 \
+  --final-render-scale 0.125
 
-    if [[ "${i}" -eq 1 ]]; then
-      ns-train depth-nerfacto \
-        --vis tensorboard \
-        --experiment-name "ensemble_${i}" \
-        --timestamp "${scene_name}" \
-        --steps-per-save "${SAVE_EVERY}" \
-        --steps-per-eval-all-images "${EVAL_EVERY}" \
-        --steps-per-eval-image 0 \
-        --max-num-iterations "${MAX_ITERS_RUN1}" \
-        --save-only-latest-checkpoint False \
-        --logging.steps-per-log 100 \
-        --logging.profiler pytorch \
-        colmap \
-        --downscale-factor 1 \
-        --colmap-path "${dataset_dir}/sparse" \
-        --images-path "${dataset_dir}/images" \
-        --depths-path "${dataset_dir}/depths_vggt"
-    else
-      ns-train depth-nerfacto \
-        --vis tensorboard \
-        --experiment-name "ensemble_${i}" \
-        --timestamp "${scene_name}" \
-        --steps-per-save "${SAVE_EVERY}" \
-        --steps-per-eval-all-images 999999999 \
-        --steps-per-eval-image 0 \
-        --max-num-iterations "${MAX_ITERS_OTHER}" \
-        --save-only-latest-checkpoint False \
-        --logging.steps-per-log 100 \
-        --logging.profiler pytorch \
-        colmap \
-        --downscale-factor 1 \
-        --colmap-path "${dataset_dir}/sparse" \
-        --images-path "${dataset_dir}/images" \
-        --depths-path "${dataset_dir}/depths_vggt"
-    fi
+python images.py \
+  --model-roots /cluster/scratch/rbollati/new_exp/models_garden \
+  --checkpoint-step 4000 \
+  --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/garden_sparse_vggt \
+  --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/garden_sparse_aug \
+  --tmp-root /cluster/home/rbollati/tmp \
+  --tau 1.5 \
+  --debug-plot-dir image_supervision \
+  --num-final-samples 200 \
+  --final-render-scale 0.125
 
-    cd - >/dev/null
-  done
-done
+python images.py \
+  --model-roots /cluster/scratch/rbollati/new_exp/models_kitchen \
+  --checkpoint-step 1600 \
+  --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/kitchen_sparse_vggt \
+  --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/kitchen_sparse_aug \
+  --tmp-root /cluster/home/rbollati/tmp \
+  --tau 1.5 \
+  --debug-plot-dir image_supervision \
+  --num-final-samples 200 \
+  --final-render-scale 0.125
+
+python images.py \
+  --model-roots /cluster/scratch/rbollati/new_exp/models_room \
+  --checkpoint-step 30000 \
+  --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/room_sparse_vggt \
+  --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/room_sparse_aug \
+  --tmp-root /cluster/home/rbollati/tmp \
+  --tau 1.5 \
+  --debug-plot-dir image_supervision \
+  --num-final-samples 200 \
+  --final-render-scale 0.125
+
+python images.py \
+  --model-roots /cluster/scratch/rbollati/new_exp/models_stump \
+  --checkpoint-step 600 \
+  --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/stump_sparse_vggt \
+  --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/stump_sparse_aug \
+  --tmp-root /cluster/home/rbollati/tmp \
+  --tau 1.5 \
+  --debug-plot-dir image_supervision \
+  --num-final-samples 200 \
+  --final-render-scale 0.125
+
+python images.py \
+  --model-roots /cluster/scratch/rbollati/new_exp/models_treehill \
+  --checkpoint-step 200 \
+  --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/treehill_sparse_vggt \
+  --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/treehill_sparse_aug \
+  --tmp-root /cluster/home/rbollati/tmp \
+  --tau 1.5 \
+  --debug-plot-dir image_supervision \
+  --num-final-samples 200 \
+  --final-render-scale 0.125

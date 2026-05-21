@@ -498,7 +498,38 @@ def prepare_output_dataset(src_run1_dir, dst_dir):
         "[prepare_output_dataset] Expected sizes:",
         {k: {"W": v[0], "H": v[1]} for k, v in expected_sizes.items()},
     )
+    normalize_colmap_layout(dst)
     return image_dirs, weight_dirs, expected_sizes
+
+
+def normalize_colmap_layout(dataset_root: Path) -> Path:
+    """Ensure the output dataset uses the COLMAP layout sparse/0/{cameras,images,points3D}.{bin,txt}."""
+    sparse_root = dataset_root / "sparse"
+    sparse_zero = sparse_root / "0"
+
+    if not sparse_root.exists():
+        raise FileNotFoundError(f"Missing COLMAP sparse directory in output dataset: {sparse_root}")
+
+    sparse_zero.mkdir(parents=True, exist_ok=True)
+
+    moved_any = False
+    for stem in ("cameras", "images", "points3D"):
+        for ext in (".bin", ".txt"):
+            src = sparse_root / f"{stem}{ext}"
+            dst = sparse_zero / f"{stem}{ext}"
+            if src.exists():
+                shutil.move(str(src), str(dst))
+                moved_any = True
+
+    if not any((sparse_zero / f"cameras{ext}").exists() for ext in (".bin", ".txt")):
+        raise FileNotFoundError(
+            f"Could not find COLMAP cameras files in either {sparse_root} or {sparse_zero}"
+        )
+
+    if moved_any:
+        print(f"[prepare_output_dataset] normalized COLMAP layout to: {sparse_zero}")
+
+    return sparse_zero
 
 def save_multiscale_nerf_sample(median_uint8, image_dirs, expected_sizes, index):
     img = Image.fromarray(median_uint8)
