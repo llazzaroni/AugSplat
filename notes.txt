@@ -558,11 +558,11 @@ python utils/rank_gsplat_combo.py \
 
 
 python utils/plot_gsplat_eval_stats.py \
-  --run-dir /cluster/scratch/rbollati/models_treehill/gsplat \
-  --run-dir /cluster/scratch/rbollati/models_treehill/gsplat_dual_1 \
-  --run-dir /cluster/scratch/rbollati/models_treehill/gsplat_dual_2 \
-  --run-dir /cluster/scratch/rbollati/models_treehill/gsplat_staged \
-  --run-dir /cluster/scratch/rbollati/models_treehill/gsplat_staged_2 \
+  --run-dir /cluster/scratch/rbollati/models_bonsai/gsplat \
+  --run-dir /cluster/scratch/rbollati/models_bonsai/gsplat_dual_1 \
+  --run-dir /cluster/scratch/rbollati/models_bonsai/gsplat_dual_2 \
+  --run-dir /cluster/scratch/rbollati/models_bonsai/gsplat_staged \
+  --run-dir /cluster/scratch/rbollati/models_bonsai/gsplat_staged_2 \
   --label gsplat \
   --label gsplat_dual \
   --label gsplat_dual_1 \
@@ -1202,6 +1202,49 @@ export PATH=$CUDA_HOME/bin:$PATH
 export LD_LIBRARY_PATH=$CUDA_HOME/lib64:${LD_LIBRARY_PATH:-}
 cd RadSplat/RadSplat
 
+
+
+python -m experiments.run_gsplat default \
+  --dual_runner \
+  --data_dir /cluster/scratch/rbollati/dataset/bicycle_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/models_bicycle/gsplat_dual_nerf_init \
+  --pt_path /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/depth/ray_sample.pt \
+  --data_factor 1 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --dual_nerf_loss_weight 2 \
+  --max_steps 20000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+
+python utils/report_gsplat_reference_metrics.py \
+  --run-dir /cluster/scratch/rbollati/models_treehill/gsplat \
+  --run-dir /cluster/scratch/rbollati/models_treehill/gsplat_staged \
+  --run-dir /cluster/scratch/rbollati/models_treehill/gsplat_staged_2 \
+  --run-dir /cluster/scratch/rbollati/models_treehill/gsplat_dual_1 \
+  --run-dir /cluster/scratch/rbollati/models_treehill/gsplat_dual_2 \
+  --label gsplat \
+  --label staged_1 \
+  --label staged_2 \
+  --label dual_1 \
+  --label dual_2 \
+  --reference-run-dir /cluster/scratch/rbollati/models_treehill/gsplat \
+  --source auto \
+  --stage val \
+  --step-interval 100
+
+
+
+
+
+
+staged
+
 python -m experiments.run_gsplat default \
   --no-nerf_init \
   --dual_runner \
@@ -1218,23 +1261,6 @@ python -m experiments.run_gsplat default \
   --dual_nerf_decay_steps_to_quarter 300 \
   --dual_nerf_disable_threshold 0.1 \
   --dual_nerf_loss_weight 0 \
-  --max_steps 20000 \
-  --strategy.reset_every 100000000 \
-  --deterministic \
-  --disable_viewer
-
-python -m experiments.run_gsplat default \
-  --dual_runner \
-  --data_dir /cluster/scratch/rbollati/dataset/bicycle_sparse_aug \
-  --result_dir /cluster/scratch/rbollati/models_bicycle/gsplat_dual_nerf_init \
-  --pt_path /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/depth/ray_sample.pt \
-  --data_factor 1 \
-  --nerf_samples_data_factor 8 \
-  --batch_size 1 \
-  --nerf_batch_factor 20 \
-  --dual_nerf_decay_steps_to_quarter 300 \
-  --dual_nerf_disable_threshold 0.1 \
-  --dual_nerf_loss_weight 2 \
   --max_steps 20000 \
   --strategy.reset_every 100000000 \
   --deterministic \

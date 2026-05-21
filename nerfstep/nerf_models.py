@@ -30,7 +30,7 @@ warnings.filterwarnings(
 
 class Nerfacto:
 
-    def __init__(self, config_file_path: str):
+    def __init__(self, config_file_path: str, load_step: int = None):
         """
         This class is an interface to the nerfacto model from nerfstudio
         
@@ -40,6 +40,7 @@ class Nerfacto:
         print("[Nerfacto] __init__ started", flush=True)
 
         self.config_file_path = Path(config_file_path)
+        self.load_step = load_step
 
         # load model and pipeline
         print("[Nerfacto] calling eval_setup", flush=True)
@@ -57,7 +58,16 @@ class Nerfacto:
         This function load the model from the checkpoint and load it into
         the class instance
         """
-        _, pipeline, _, _ = eval_setup(self.config_file_path, test_mode="test")
+        def _set_load_step(config):
+            if self.load_step is not None:
+                config.load_step = self.load_step
+            return config
+
+        _, pipeline, _, _ = eval_setup(
+            self.config_file_path,
+            test_mode="test",
+            update_config_callback=_set_load_step,
+        )
         return pipeline, pipeline.model
 
     def render_camera(self, camera_index: int):
@@ -180,4 +190,3 @@ class Nerfacto:
         }
 
         return outputs, field_outputs, weights
-

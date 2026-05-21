@@ -1,6 +1,7 @@
 BASE_DIR="/cluster/scratch/rbollati/dataset"
 MODELS_ROOT="/cluster/scratch/rbollati"
 TMP_ROOT="/cluster/home/rbollati/tmp"
+CHECKPOINT_STEP="${CHECKPOINT_STEP:-}"
 
 for d in "$BASE_DIR"/*_sparse_vggt; do
   [ -d "$d" ] || continue
@@ -12,35 +13,27 @@ for d in "$BASE_DIR"/*_sparse_vggt; do
 
   model_dir="$MODELS_ROOT/models_${prefix}"
 
-  cfg1="$model_dir/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/depth/config.yml"
-  cfg2="$model_dir/nerf_ensemble_2/outputs/ensemble_1/depth-nerfacto/depth/config.yml"
-  cfg3="$model_dir/nerf_ensemble_3/outputs/ensemble_1/depth-nerfacto/depth/config.yml"
-  cfg4="$model_dir/nerf_ensemble_4/outputs/ensemble_1/depth-nerfacto/depth/config.yml"
-  cfg5="$model_dir/nerf_ensemble_5/outputs/ensemble_1/depth-nerfacto/depth/config.yml"
-
-  for cfg in "$cfg1" "$cfg2" "$cfg3" "$cfg4" "$cfg5"; do
-    [ -f "$cfg" ] || { echo "Missing config: $cfg"; continue 2; }
+  for i in 1 2 3 4 5; do
+    run_dir="$model_dir/nerf_ensemble_$i"
+    [ -d "$run_dir" ] || { echo "Missing ensemble dir: $run_dir"; continue 2; }
   done
 
-  python ~/RadSplat/RadSplat/images.py \
-    --nerf-folders \
-      "$cfg1" \
-      "$cfg2" \
-      "$cfg3" \
-      "$cfg4" \
-      "$cfg5" \
-    --exp-dirs \
-      "$model_dir/nerf_ensemble_1" \
-      "$model_dir/nerf_ensemble_2" \
-      "$model_dir/nerf_ensemble_3" \
-      "$model_dir/nerf_ensemble_4" \
-      "$model_dir/nerf_ensemble_5" \
-    --input-dataset "$BASE_DIR/$scene" \
-    --output-dataset "$BASE_DIR/${prefix}_sparse_aug" \
-    --tmp-root "$TMP_ROOT" \
-    --tau 1.5 \
-    --debug-plot-dir image_supervision \
-    --num-final-samples 200 \
-    --final-render-scale 0.125 \
+  cmd=(
+    python ~/RadSplat/RadSplat/images.py
+    --model-roots "$model_dir"
+    --input-dataset "$BASE_DIR/$scene"
+    --output-dataset "$BASE_DIR/${prefix}_sparse_aug"
+    --tmp-root "$TMP_ROOT"
+    --tau 1.5
+    --debug-plot-dir image_supervision
+    --num-final-samples 200
+    --final-render-scale 0.125
     --camera-id 1
+  )
+
+  if [ -n "$CHECKPOINT_STEP" ]; then
+    cmd+=(--checkpoint-step "$CHECKPOINT_STEP")
+  fi
+
+  "${cmd[@]}"
 done

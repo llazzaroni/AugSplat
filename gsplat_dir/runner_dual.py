@@ -655,12 +655,8 @@ class RunnerDual(Runner):
                 print("Step: ", step, stats)
                 with open(f"{self.stats_dir}/train_step{step:04d}_rank{self.world_rank}.json", "w") as f:
                     json.dump(stats, f)
-                data = {"step": save_step, "global_step": step, "splats": self.splats.state_dict()}
-                if cfg.pose_opt:
-                    data["pose_adjust"] = self.pose_adjust.module.state_dict() if world_size > 1 else self.pose_adjust.state_dict()
-                if cfg.app_opt:
-                    data["app_module"] = self.app_module.module.state_dict() if world_size > 1 else self.app_module.state_dict()
-                torch.save(data, f"{self.ckpt_dir}/ckpt_{step}_rank{self.world_rank}.pt")
+                # Keep the training stats JSON, but avoid periodic checkpoint saves.
+                # Checkpoints are written only when the validation combined score improves.
 
             if cfg.sparse_grad:
                 assert cfg.packed, "Sparse gradients only work with packed mode."

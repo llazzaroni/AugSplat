@@ -624,7 +624,8 @@ class Runner:
                     self.writer.add_image("train/render", canvas, step)
                 self.writer.flush()
 
-            # Save periodic checkpoints before updating the model.
+            # Keep lightweight per-step stats, but do not save periodic checkpoints.
+            # Checkpoints are managed only by the best validation combined score.
             if step in [i - 1 for i in cfg.save_steps]:
                 mem = torch.cuda.max_memory_allocated() / 1024**3
                 stats = {
@@ -638,20 +639,6 @@ class Runner:
                     "w",
                 ) as f:
                     json.dump(stats, f)
-                data = {"step": step, "splats": self.splats.state_dict()}
-                if cfg.pose_opt:
-                    if world_size > 1:
-                        data["pose_adjust"] = self.pose_adjust.module.state_dict()
-                    else:
-                        data["pose_adjust"] = self.pose_adjust.state_dict()
-                if cfg.app_opt:
-                    if world_size > 1:
-                        data["app_module"] = self.app_module.module.state_dict()
-                    else:
-                        data["app_module"] = self.app_module.state_dict()
-                torch.save(
-                    data, f"{self.ckpt_dir}/ckpt_{step}_rank{self.world_rank}.pt"
-                )
             if (
                 step in [i - 1 for i in cfg.ply_steps] or step == max_steps - 1
             ) and cfg.save_ply:
@@ -992,21 +979,7 @@ class Runner:
             "w",
         ) as f:
             json.dump(stats, f)
-        data = {"step": 0, "splats": self.splats.state_dict()}
-        if self.cfg.pose_opt:
-            if self.world_size > 1:
-                data["pose_adjust"] = self.pose_adjust.module.state_dict()
-            else:
-                data["pose_adjust"] = self.pose_adjust.state_dict()
-        if cfg.app_opt:
-            if self.world_size > 1:
-                data["app_module"] = self.app_module.module.state_dict()
-            else:
-                data["app_module"] = self.app_module.state_dict()
-        torch.save(
-            data, f"{self.ckpt_dir}/ckpt_{0}_rank{self.world_rank}.pt"
-        )
-        print("ckpt 0 has been saved!")
+        print("periodic checkpoint saving disabled; only best validation checkpoint will be written")
 
     @torch.no_grad()
     def render_traj(self, step: int):

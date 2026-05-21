@@ -16,6 +16,7 @@ from nerfstudio.data.utils.colmap_parsing_utils import rotmat2qvec
 from nerfstudio.data.utils.colmap_parsing_utils import Image as ColmapImage
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp"}
+SUPPORTED_METHODS = {"nerfacto", "depth-nerfacto", "mipnerf"}
 
 
 @contextmanager
@@ -26,6 +27,44 @@ def pushd(new_dir):
         yield
     finally:
         os.chdir(old_dir)
+
+
+def find_run_config(run_dir: Path) -> Path:
+    configs = sorted(run_dir.glob("outputs/*/*/*/config.y*ml"))
+    if not configs:
+        raise FileNotFoundError(f"Could not find a nerfstudio config under: {run_dir}")
+    if len(configs) == 1:
+        return configs[0]
+
+    method_filtered = [cfg for cfg in configs if cfg.parents[1].name in SUPPORTED_METHODS]
+    if len(method_filtered) == 1:
+        return method_filtered[0]
+
+    raise RuntimeError(
+        f"Found multiple configs under {run_dir} and could not disambiguate: "
+        f"{[str(cfg) for cfg in configs]}"
+    )
+
+
+def resolve_model_inputs(args):
+    if args.model_roots:
+        folders = []
+        exp_dirs = []
+        for model_root_raw in args.model_roots:
+            model_root = Path(model_root_raw)
+            for i in range(1, args.num_ensembles + 1):
+                run_dir = model_root / f"nerf_ensemble_{i}"
+                if not run_dir.is_dir():
+                    raise FileNotFoundError(f"Missing ensemble directory: {run_dir}")
+                folders.append(str(find_run_config(run_dir)))
+                exp_dirs.append(str(run_dir))
+        return folders, exp_dirs
+
+    if not args.nerf_folders or not args.exp_dirs:
+        raise ValueError("Either --model-roots or both --nerf-folders and --exp-dirs must be provided.")
+    if len(args.nerf_folders) != len(args.exp_dirs):
+        raise ValueError("--nerf-folders and --exp-dirs must have the same length.")
+    return args.nerf_folders, args.exp_dirs
 
 
 
@@ -520,7 +559,7 @@ def save_weight_visualization(weight_map, out_dir, index):
 
 def render_kept_views_to_tmp_pngs(
     folders, exp_dirs, new_c2w_kept,
-    tmp_root, render_scale=0.5, num_models_to_render=None
+    tmp_root, render_scale=0.5, num_models_to_render=None, checkpoint_step=None
 ):
     """
     Creates:
@@ -551,7 +590,7 @@ def render_kept_views_to_tmp_pngs(
         model_dir.mkdir(parents=True, exist_ok=True)
 
         with pushd(exp_dir):
-            model = Nerfacto(cfg)
+            model = Nerfacto(cfg, load_step=checkpoint_step)
 
         for i in range(K):
             if i == 0 or (i + 1) % 10 == 0 or i + 1 == K:
@@ -699,16 +738,15 @@ def append_nerf_images_to_colmap(
 def main(args):
     torch.manual_seed(0)
     np.random.seed(0)
-    folders = args.nerf_folders
-    exp_dirs = args.exp_dirs
+    folders, exp_dirs = resolve_model_inputs(args)
 
     sum_rgb = None
     sum_sq_rgb = None
-    M = len(args.nerf_folders)
+    M = len(folders)
 
     # First load the cameras in the dataset
     with pushd(exp_dirs[0]):
-        model = Nerfacto(folders[0])
+        model = Nerfacto(folders[0], load_step=args.checkpoint_step)
 
     cams = model.pipeline.datamanager.train_dataset.cameras.to('cpu')
     dpo = model.pipeline.datamanager.train_dataparser_outputs
@@ -738,7 +776,7 @@ def main(args):
     for mi, (cfg, exp_dir) in enumerate(zip(folders, exp_dirs), start=1):
         print(f"[phase] scoring model {mi}/{len(folders)}")
         with pushd(exp_dir):
-            model = Nerfacto(cfg)        
+            model = Nerfacto(cfg, load_step=args.checkpoint_step)
 
         # render low-res for ALL candidate poses (downsample by 8 for selection)
         rgb = create_new_images_low_res_torch(
@@ -804,6 +842,7 @@ def main(args):
         tmp_root=tmp_root,
         render_scale=args.final_render_scale,
         num_models_to_render=None,  # render all models for ensemble median
+        checkpoint_step=args.checkpoint_step,
     )
 
     final_dir = build_final_dataset_from_tmp(
@@ -835,8 +874,27 @@ def main(args):
     
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
-    p.add_argument("--nerf-folders", nargs="+", required=True)
-    p.add_argument("--exp-dirs", nargs="+", required=True)
+    p.add_argument("--nerf-folders", nargs="+")
+    p.add_argument("--exp-dirs", nargs="+")
+    p.add_argument(
+        "--model-roots",
+        nargs="+",
+        help="Scene-level roots such as models_bicycle. Each root is expected to contain "
+             "nerf_ensemble_1..N, and config.yml files are discovered automatically.",
+    )
+    p.add_argument(
+        "--num-ensembles",
+        type=int,
+        default=5,
+        help="Number of ensemble runs to auto-discover under each --model-roots directory.",
+    )
+    p.add_argument(
+        "--checkpoint-step",
+        type=int,
+        default=None,
+        help="Checkpoint step to load, e.g. 1400 for step-000001400.ckpt. "
+             "If omitted, the latest checkpoint is used.",
+    )
     p.add_argument("--input-dataset", required=True)
     p.add_argument("--output-dataset", required=True)
     p.add_argument("--tmp-root", default="/tmp")          # or your scratch path

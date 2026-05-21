@@ -1,0 +1,255 @@
+1) step: reduce the dataset, leave only 30 images left
+
+python utils/sample_multiscale_dataset.py \
+  --src /cluster/scratch/rbollati/new_exp/360_v2/bicycle \
+  --dst /cluster/scratch/rbollati/new_exp/360_v2/bicycle_sparse \
+  --n 30 \
+  --seed 42
+
+python utils/sample_multiscale_dataset.py \
+  --src /cluster/scratch/rbollati/new_exp/360_v2/bonsai \
+  --dst /cluster/scratch/rbollati/new_exp/360_v2/bonsai_sparse \
+  --n 30 \
+  --seed 42
+
+python utils/sample_multiscale_dataset.py \
+  --src /cluster/scratch/rbollati/new_exp/360_v2/flowers \
+  --dst /cluster/scratch/rbollati/new_exp/360_v2/flowers_sparse \
+  --n 30 \
+  --seed 42
+
+python utils/sample_multiscale_dataset.py \
+  --src /cluster/scratch/rbollati/new_exp/360_v2/garden \
+  --dst /cluster/scratch/rbollati/new_exp/360_v2/garden_sparse \
+  --n 30 \
+  --seed 42
+
+python utils/sample_multiscale_dataset.py \
+  --src /cluster/scratch/rbollati/new_exp/360_v2/kitchen \
+  --dst /cluster/scratch/rbollati/new_exp/360_v2/kitchen_sparse \
+  --n 30 \
+  --seed 42
+
+python utils/sample_multiscale_dataset.py \
+  --src /cluster/scratch/rbollati/new_exp/360_v2/room \
+  --dst /cluster/scratch/rbollati/new_exp/360_v2/room_sparse \
+  --n 30 \
+  --seed 42
+
+python utils/sample_multiscale_dataset.py \
+  --src /cluster/scratch/rbollati/new_exp/360_v2/stump \
+  --dst /cluster/scratch/rbollati/new_exp/360_v2/stump_sparse \
+  --n 30 \
+  --seed 42
+
+python utils/sample_multiscale_dataset.py \
+  --src /cluster/scratch/rbollati/new_exp/360_v2/counter \
+  --dst /cluster/scratch/rbollati/new_exp/360_v2/counter_sparse \
+  --n 30 \
+  --seed 42
+
+python utils/sample_multiscale_dataset.py \
+  --src /cluster/scratch/rbollati/new_exp/360_v2/treehill \
+  --dst /cluster/scratch/rbollati/new_exp/360_v2/treehill_sparse \
+  --n 30 \
+  --seed 42
+
+2) step: run prepare_vggt_dataset
+
+srun -A ls_polle -p gpupr.4h   --gpus=nvidia_a100_80gb_pcie:1   --cpus-per-task=8   --mem-per-cpu=16G   --time=02:00:00   --pty bash
+
+python utils/prepare_vggt_dataset.py \
+  --src /cluster/scratch/rbollati/new_exp/360_v2/bicycle_sparse \
+  --dst /cluster/scratch/rbollati/new_exp/360_v2/bicycle_sparse_vggt \
+  --overwrite \
+  --conf-thres-value 0.0
+
+python utils/prepare_vggt_dataset.py \
+  --src /cluster/scratch/rbollati/new_exp/360_v2/bonsai_sparse \
+  --dst /cluster/scratch/rbollati/new_exp/360_v2/bonsai_sparse_vggt \
+  --overwrite \
+  --conf-thres-value 0.0
+
+python utils/prepare_vggt_dataset.py \
+  --src /cluster/scratch/rbollati/new_exp/360_v2/counter_sparse \
+  --dst /cluster/scratch/rbollati/new_exp/360_v2/counter_sparse_vggt \
+  --overwrite \
+  --conf-thres-value 0.0
+
+python utils/prepare_vggt_dataset.py \
+  --src /cluster/scratch/rbollati/new_exp/360_v2/flowers_sparse \
+  --dst /cluster/scratch/rbollati/new_exp/360_v2/flowers_sparse_vggt \
+  --overwrite \
+  --conf-thres-value 0.0
+
+python utils/prepare_vggt_dataset.py \
+  --src /cluster/scratch/rbollati/new_exp/360_v2/garden_sparse \
+  --dst /cluster/scratch/rbollati/new_exp/360_v2/garden_sparse_vggt \
+  --overwrite \
+  --conf-thres-value 0.0
+
+python utils/prepare_vggt_dataset.py \
+  --src /cluster/scratch/rbollati/new_exp/360_v2/kitchen_sparse \
+  --dst /cluster/scratch/rbollati/new_exp/360_v2/kitchen_sparse_vggt \
+  --overwrite \
+  --conf-thres-value 0.0
+
+python utils/prepare_vggt_dataset.py \
+  --src /cluster/scratch/rbollati/new_exp/360_v2/room_sparse \
+  --dst /cluster/scratch/rbollati/new_exp/360_v2/room_sparse_vggt \
+  --overwrite \
+  --conf-thres-value 0.0
+
+python utils/prepare_vggt_dataset.py \
+  --src /cluster/scratch/rbollati/new_exp/360_v2/stump_sparse \
+  --dst /cluster/scratch/rbollati/new_exp/360_v2/stump_sparse_vggt \
+  --overwrite \
+  --conf-thres-value 0.0
+
+python utils/prepare_vggt_dataset.py \
+  --src /cluster/scratch/rbollati/new_exp/360_v2/treehill_sparse \
+  --dst /cluster/scratch/rbollati/new_exp/360_v2/treehill_sparse_vggt \
+  --overwrite \
+  --conf-thres-value 0.0
+
+3) step: now the datasets are ready. Train the ensembles of nerf models
+
+srun -A ls_polle -p gpuhe.4h --ntasks=1 --mem-per-cpu=4G --gpus=nvidia_geforce_rtx_4090:1 --time=04:00:00 --pty bash
+
+DATA_ROOT="/cluster/scratch/rbollati/new_exp/360_v2"
+OUT_ROOT="/cluster/scratch/rbollati/new_exp"
+
+NUM_ENSEMBLE=5
+MAX_ITERS_RUN1=2500
+MAX_ITERS_OTHER=2000
+SAVE_EVERY=200
+EVAL_EVERY=200
+
+for dataset_dir in "${DATA_ROOT}"/*_sparse_vggt; do
+  [[ -d "${dataset_dir}" ]] || continue
+
+  dataset_name="$(basename "${dataset_dir}")"
+  scene_name="${dataset_name%_sparse_vggt}"
+
+  model_root="${OUT_ROOT}/models_${scene_name}"
+  mkdir -p "${model_root}"
+
+  for i in $(seq 1 "${NUM_ENSEMBLE}"); do
+    run_dir="${model_root}/nerf_ensemble_${i}"
+    mkdir -p "${run_dir}"
+    cd "${run_dir}"
+
+    if [[ "${i}" -eq 1 ]]; then
+      ns-train depth-nerfacto \
+        --vis tensorboard \
+        --experiment-name "ensemble_${i}" \
+        --timestamp "${scene_name}" \
+        --steps-per-save "${SAVE_EVERY}" \
+        --steps-per-eval-all-images "${EVAL_EVERY}" \
+        --steps-per-eval-image 0 \
+        --max-num-iterations "${MAX_ITERS_RUN1}" \
+        --save-only-latest-checkpoint False \
+        --logging.steps-per-log 100 \
+        --logging.profiler pytorch \
+        colmap \
+        --downscale-factor 1 \
+        --colmap-path "${dataset_dir}/sparse" \
+        --images-path "${dataset_dir}/images" \
+        --depths-path "${dataset_dir}/depths_vggt"
+    else
+      ns-train depth-nerfacto \
+        --vis tensorboard \
+        --experiment-name "ensemble_${i}" \
+        --timestamp "${scene_name}" \
+        --steps-per-save "${SAVE_EVERY}" \
+        --steps-per-eval-all-images 100000000 \
+        --steps-per-eval-image 0 \
+        --max-num-iterations "${MAX_ITERS_OTHER}" \
+        --save-only-latest-checkpoint False \
+        --logging.steps-per-log 100 \
+        --logging.profiler pytorch \
+        colmap \
+        --downscale-factor 1 \
+        --colmap-path "${dataset_dir}/sparse" \
+        --images-path "${dataset_dir}/images" \
+        --depths-path "${dataset_dir}/depths_vggt"
+    fi
+
+    cd - >/dev/null
+  done
+done
+
+optimal steps for bicycle: 800
+optimal steps for bonsai: 800
+optimal steps for counter: 200
+optimal steps for flowers: 2400
+optimal steps for garden: 4000
+optimal steps for kitchen: 1600
+optimal steps for room: 30000
+optimal steps for stump: 600
+optimal steps for treehill: 200
+
+tensorboard --logdir outputs/ensemble_1/depth-nerfacto/garden
+
+DATA_ROOT="/cluster/scratch/rbollati/new_exp/360_v2"
+OUT_ROOT="/cluster/scratch/rbollati/new_exp"
+
+NUM_ENSEMBLE=5
+MAX_ITERS_RUN1=30001
+MAX_ITERS_OTHER=30001
+SAVE_EVERY=1000
+EVAL_EVERY=3000
+
+SCENES=(
+  room
+)
+
+for scene_name in "${SCENES[@]}"; do
+  dataset_dir="${DATA_ROOT}/${scene_name}_sparse_vggt"
+  model_root="${OUT_ROOT}/models_${scene_name}"
+  mkdir -p "${model_root}"
+
+  for i in $(seq 1 "${NUM_ENSEMBLE}"); do
+    run_dir="${model_root}/nerf_ensemble_${i}"
+    mkdir -p "${run_dir}"
+    cd "${run_dir}"
+
+    if [[ "${i}" -eq 1 ]]; then
+      ns-train depth-nerfacto \
+        --vis tensorboard \
+        --experiment-name "ensemble_${i}" \
+        --timestamp "${scene_name}" \
+        --steps-per-save "${SAVE_EVERY}" \
+        --steps-per-eval-all-images "${EVAL_EVERY}" \
+        --steps-per-eval-image 0 \
+        --max-num-iterations "${MAX_ITERS_RUN1}" \
+        --save-only-latest-checkpoint False \
+        --logging.steps-per-log 100 \
+        --logging.profiler pytorch \
+        colmap \
+        --downscale-factor 1 \
+        --colmap-path "${dataset_dir}/sparse" \
+        --images-path "${dataset_dir}/images" \
+        --depths-path "${dataset_dir}/depths_vggt"
+    else
+      ns-train depth-nerfacto \
+        --vis tensorboard \
+        --experiment-name "ensemble_${i}" \
+        --timestamp "${scene_name}" \
+        --steps-per-save "${SAVE_EVERY}" \
+        --steps-per-eval-all-images 999999999 \
+        --steps-per-eval-image 0 \
+        --max-num-iterations "${MAX_ITERS_OTHER}" \
+        --save-only-latest-checkpoint False \
+        --logging.steps-per-log 100 \
+        --logging.profiler pytorch \
+        colmap \
+        --downscale-factor 1 \
+        --colmap-path "${dataset_dir}/sparse" \
+        --images-path "${dataset_dir}/images" \
+        --depths-path "${dataset_dir}/depths_vggt"
+    fi
+
+    cd - >/dev/null
+  done
+done
