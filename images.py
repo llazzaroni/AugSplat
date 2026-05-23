@@ -2,6 +2,8 @@ import torch
 import numpy as np
 import argparse
 import os
+import json
+import math
 from contextlib import contextmanager
 import cv2
 from PIL import Image
@@ -65,6 +67,49 @@ def resolve_model_inputs(args):
     if len(args.nerf_folders) != len(args.exp_dirs):
         raise ValueError("--nerf-folders and --exp-dirs must have the same length.")
     return args.nerf_folders, args.exp_dirs
+
+
+def combined_metric(psnr: float, ssim: float, lpips: float) -> float:
+    return (
+        (10.0 ** (-float(psnr) / 10.0))
+        * math.sqrt(max(0.0, 1.0 - float(ssim)))
+        * float(lpips)
+    ) ** (1.0 / 3.0)
+
+
+def select_best_checkpoint_step(config_path: Path) -> int:
+    eval_path = config_path.parent / "eval_all_images.jsonl"
+    if not eval_path.exists():
+        raise FileNotFoundError(
+            f"Could not find eval metrics file for automatic checkpoint selection: {eval_path}"
+        )
+
+    best_step = None
+    best_metric = None
+    with eval_path.open("r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            row = json.loads(line)
+            if not all(k in row for k in ("step", "psnr", "ssim", "lpips")):
+                continue
+            metric = combined_metric(row["psnr"], row["ssim"], row["lpips"])
+            if best_metric is None or metric < best_metric:
+                best_metric = metric
+                best_step = int(row["step"])
+
+    if best_step is None:
+        raise RuntimeError(f"No valid psnr/ssim/lpips rows found in {eval_path}")
+    return best_step
+
+
+def resolve_checkpoint_step(config_path: str, args) -> int:
+    if args.checkpoint_step is not None:
+        return args.checkpoint_step
+    if args.checkpoint_selection == "latest":
+        return None
+    return select_best_checkpoint_step(Path(config_path))
 
 
 
@@ -590,7 +635,7 @@ def save_weight_visualization(weight_map, out_dir, index):
 
 def render_kept_views_to_tmp_pngs(
     folders, exp_dirs, new_c2w_kept,
-    tmp_root, render_scale=0.5, num_models_to_render=None, checkpoint_step=None
+    tmp_root, render_scale=0.5, num_models_to_render=None, checkpoint_steps=None
 ):
     """
     Creates:
@@ -613,15 +658,20 @@ def render_kept_views_to_tmp_pngs(
         f"kept_views={K}, render_scale={render_scale}"
     )
 
-    for m, (cfg, exp_dir) in enumerate(
-        zip(folders[:num_models_to_render], exp_dirs[:num_models_to_render]), start=1
+    for m, (cfg, exp_dir, load_step) in enumerate(
+        zip(
+            folders[:num_models_to_render],
+            exp_dirs[:num_models_to_render],
+            checkpoint_steps[:num_models_to_render],
+        ),
+        start=1,
     ):
         print(f"[tmp-render] loading model {m}/{num_models_to_render}: {cfg}")
         model_dir = tmp_root / f"model_{m:03d}"
         model_dir.mkdir(parents=True, exist_ok=True)
 
         with pushd(exp_dir):
-            model = Nerfacto(cfg, load_step=checkpoint_step)
+            model = Nerfacto(cfg, load_step=load_step)
 
         for i in range(K):
             if i == 0 or (i + 1) % 10 == 0 or i + 1 == K:
@@ -770,6 +820,12 @@ def main(args):
     torch.manual_seed(0)
     np.random.seed(0)
     folders, exp_dirs = resolve_model_inputs(args)
+    checkpoint_steps = [resolve_checkpoint_step(cfg, args) for cfg in folders]
+    for cfg, step in zip(folders, checkpoint_steps):
+        if step is None:
+            print(f"[checkpoint-select] {cfg}: using latest checkpoint")
+        else:
+            print(f"[checkpoint-select] {cfg}: using step {step}")
 
     sum_rgb = None
     sum_sq_rgb = None
@@ -777,7 +833,7 @@ def main(args):
 
     # First load the cameras in the dataset
     with pushd(exp_dirs[0]):
-        model = Nerfacto(folders[0], load_step=args.checkpoint_step)
+        model = Nerfacto(folders[0], load_step=checkpoint_steps[0])
 
     cams = model.pipeline.datamanager.train_dataset.cameras.to('cpu')
     dpo = model.pipeline.datamanager.train_dataparser_outputs
@@ -804,10 +860,10 @@ def main(args):
 
 
     print(f"[phase] candidate scoring over ensemble: {len(folders)} models")
-    for mi, (cfg, exp_dir) in enumerate(zip(folders, exp_dirs), start=1):
+    for mi, (cfg, exp_dir, load_step) in enumerate(zip(folders, exp_dirs, checkpoint_steps), start=1):
         print(f"[phase] scoring model {mi}/{len(folders)}")
         with pushd(exp_dir):
-            model = Nerfacto(cfg, load_step=args.checkpoint_step)
+            model = Nerfacto(cfg, load_step=load_step)
 
         # render low-res for ALL candidate poses (downsample by 8 for selection)
         rgb = create_new_images_low_res_torch(
@@ -873,7 +929,7 @@ def main(args):
         tmp_root=tmp_root,
         render_scale=args.final_render_scale,
         num_models_to_render=None,  # render all models for ensemble median
-        checkpoint_step=args.checkpoint_step,
+        checkpoint_steps=checkpoint_steps,
     )
 
     final_dir = build_final_dataset_from_tmp(
@@ -924,7 +980,14 @@ if __name__ == "__main__":
         type=int,
         default=None,
         help="Checkpoint step to load, e.g. 1400 for step-000001400.ckpt. "
-             "If omitted, the latest checkpoint is used.",
+             "If provided, it overrides automatic checkpoint selection.",
+    )
+    p.add_argument(
+        "--checkpoint-selection",
+        choices=("best", "latest"),
+        default="best",
+        help="How to choose checkpoints when --checkpoint-step is not provided. "
+             "'best' uses eval_all_images.jsonl per model; 'latest' uses the latest checkpoint.",
     )
     p.add_argument("--input-dataset", required=True)
     p.add_argument("--output-dataset", required=True)
