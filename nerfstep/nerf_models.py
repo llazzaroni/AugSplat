@@ -2,6 +2,7 @@ import torchvision
 import warnings
 import logging
 import sys
+import os
 import numpy as np
 import torch
 
@@ -27,6 +28,28 @@ warnings.filterwarnings(
     "ignore",
     message="Using a non-tuple sequence for multidimensional indexing is deprecated",
 )
+
+
+def _infer_run_dir_from_config(config_path: Path) -> Path:
+    parts = config_path.parts
+    if "outputs" in parts:
+        outputs_idx = parts.index("outputs")
+        if outputs_idx > 0:
+            return Path(*parts[:outputs_idx])
+    return config_path.parent
+
+
+class _pushd:
+    def __init__(self, new_dir: Path):
+        self.new_dir = str(new_dir)
+        self.old_dir = None
+
+    def __enter__(self):
+        self.old_dir = os.getcwd()
+        os.chdir(self.new_dir)
+
+    def __exit__(self, exc_type, exc, tb):
+        os.chdir(self.old_dir)
 
 class Nerfacto:
 
@@ -58,16 +81,24 @@ class Nerfacto:
         This function load the model from the checkpoint and load it into
         the class instance
         """
+        run_dir = _infer_run_dir_from_config(self.config_file_path)
+
         def _set_load_step(config):
             if self.load_step is not None:
                 config.load_step = self.load_step
+            load_dir = getattr(config, "load_dir", None)
+            if load_dir:
+                load_dir_path = Path(load_dir)
+                if not load_dir_path.is_absolute():
+                    config.load_dir = run_dir / load_dir_path
             return config
 
-        _, pipeline, _, _ = eval_setup(
-            self.config_file_path,
-            test_mode="test",
-            update_config_callback=_set_load_step,
-        )
+        with _pushd(run_dir):
+            _, pipeline, _, _ = eval_setup(
+                self.config_file_path,
+                test_mode="test",
+                update_config_callback=_set_load_step,
+            )
         return pipeline, pipeline.model
 
     def render_camera(self, camera_index: int):

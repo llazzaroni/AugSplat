@@ -381,3 +381,135 @@ for ax, metric in zip(axes, metrics):
 plt.tight_layout()
 plt.savefig("/cluster/scratch/rbollati/new_exp/stump_nerf_compare.png", dpi=200, bbox_inches="tight")
 PY
+
+python images.py \
+  --model-roots /cluster/scratch/rbollati/new_exp/models_bicycle \
+  --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/bicycle_sparse_vggt \
+  --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/bicycle_sparse_aug \
+  --tmp-root /cluster/home/rbollati/tmp \
+  --tau 1.5 \
+  --debug-plot-dir image_supervision \
+  --num-final-samples 200 \
+  --final-render-scale 0.125
+
+python images.py \
+  --model-roots /cluster/scratch/rbollati/new_exp/models_bonsai \
+  --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/bonsai_sparse_vggt \
+  --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/bonsai_sparse_aug \
+  --tmp-root /cluster/home/rbollati/tmp \
+  --tau 1.5 \
+  --debug-plot-dir image_supervision \
+  --num-final-samples 200 \
+  --final-render-scale 0.125
+
+python images.py \
+  --model-roots /cluster/scratch/rbollati/new_exp/models_counter \
+  --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/counter_sparse_vggt \
+  --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/counter_sparse_aug \
+  --tmp-root /cluster/home/rbollati/tmp \
+  --tau 1.5 \
+  --debug-plot-dir image_supervision \
+  --num-final-samples 200 \
+  --final-render-scale 0.125
+
+python images.py \
+  --model-roots /cluster/scratch/rbollati/new_exp/models_stump \
+  --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/stump_sparse_vggt \
+  --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/stump_sparse_aug \
+  --tmp-root /cluster/home/rbollati/tmp \
+  --tau 1.5 \
+  --debug-plot-dir image_supervision \
+  --num-final-samples 200 \
+  --final-render-scale 0.125
+
+python images.py \
+  --model-roots /cluster/scratch/rbollati/new_exp/models_treehill \
+  --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/treehill_sparse_vggt \
+  --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/treehill_sparse_aug \
+  --tmp-root /cluster/home/rbollati/tmp \
+  --tau 1.5 \
+  --debug-plot-dir image_supervision \
+  --num-final-samples 200 \
+  --final-render-scale 0.125
+
+5) step: run nerfstep
+
+python ~/RadSplat/RadSplat/nerf_step.py \
+    --nerf-folder /cluster/scratch/rbollati/new_exp/models_bicycle/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/bicycle/config.yml \
+    --output-name /cluster/scratch/rbollati/new_exp/models_bicycle/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/bicycle/ray_sample.pt \
+    --sampling-size 1000000 \
+    --ray-sampling-strategy random
+
+python ~/RadSplat/RadSplat/nerf_step.py \
+    --nerf-folder /cluster/scratch/rbollati/new_exp/models_bonsai/nerf_ensemble_1/outputs/ensemble_1/nerfacto/bonsai/config.yml \
+    --output-name /cluster/scratch/rbollati/new_exp/models_bonsai/nerf_ensemble_1/outputs/ensemble_1/nerfacto/bonsai/ray_sample.pt \
+    --sampling-size 1000000 \
+    --ray-sampling-strategy random
+
+python ~/RadSplat/RadSplat/nerf_step.py \
+    --nerf-folder /cluster/scratch/rbollati/new_exp/models_counter/nerf_ensemble_1/outputs/ensemble_1/nerfacto/counter/config.yml \
+    --output-name /cluster/scratch/rbollati/new_exp/models_counter/nerf_ensemble_1/outputs/ensemble_1/nerfacto/counter/ray_sample.pt \
+    --sampling-size 1000000 \
+    --ray-sampling-strategy random
+
+python ~/RadSplat/RadSplat/nerf_step.py \
+    --nerf-folder /cluster/scratch/rbollati/new_exp/models_flowers/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/flowers/config.yml \
+    --output-name /cluster/scratch/rbollati/new_exp/models_flowers/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/flowers/ray_sample.pt \
+    --sampling-size 1000000 \
+    --ray-sampling-strategy random
+
+python ~/RadSplat/RadSplat/nerf_step.py \
+    --nerf-folder /cluster/scratch/rbollati/new_exp/models_bicycle/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/bicycle/config.yml \
+    --output-name /cluster/scratch/rbollati/new_exp/models_bicycle/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/bicycle/ray_sample.pt \
+    --sampling-size 1000000 \
+    --ray-sampling-strategy random
+
+python ~/RadSplat/RadSplat/nerf_step.py \
+    --nerf-folder /cluster/scratch/rbollati/new_exp/models_garden/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/garden/config.yml \
+    --output-name /cluster/scratch/rbollati/new_exp/models_garden/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/garden/ray_sample.pt \
+    --sampling-size 1000000 \
+    --ray-sampling-strategy random
+
+python ~/RadSplat/RadSplat/nerf_step.py \
+    --nerf-folder /cluster/scratch/rbollati/new_exp/models_kitchen/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/kitchen/config.yml \
+    --output-name /cluster/scratch/rbollati/new_exp/models_kitchen/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/kitchen/ray_sample.pt \
+    --sampling-size 1000000 \
+    --ray-sampling-strategy random
+
+python ~/RadSplat/RadSplat/nerf_step.py \
+    --nerf-folder /cluster/scratch/rbollati/new_exp/models_room/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/room/config.yml \
+    --output-name /cluster/scratch/rbollati/new_exp/models_room/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/room/ray_sample.pt \
+    --sampling-size 1000000 \
+    --ray-sampling-strategy random
+
+python ~/RadSplat/RadSplat/nerf_step.py \
+    --nerf-folder /cluster/scratch/rbollati/new_exp/models_stump/nerf_ensemble_1/outputs/ensemble_1/nerfacto/stump/config.yml \
+    --output-name /cluster/scratch/rbollati/new_exp/models_stump/nerf_ensemble_1/outputs/ensemble_1/nerfacto/stump/ray_sample.pt \
+    --sampling-size 1000000 \
+    --ray-sampling-strategy random
+
+python ~/RadSplat/RadSplat/nerf_step.py \
+    --nerf-folder /cluster/scratch/rbollati/new_exp/models_treehill/nerf_ensemble_1/outputs/ensemble_1/nerfacto/treehill/config.yml \
+    --output-name /cluster/scratch/rbollati/new_exp/models_treehill/nerf_ensemble_1/outputs/ensemble_1/nerfacto/treehill/ray_sample.pt \
+    --sampling-size 1000000 \
+    --ray-sampling-strategy random
+
+6) step: run gsplat
+
+python -m experiments.run_gsplat default \
+  --dual_runner \
+  --no-nerf_init \
+  --data_dir /path/to/dataset_aug \
+  --result_dir /path/to/results_dual_zero_nerf \
+  --pt_path /path/to/ray_sample.pt \
+  --data_factor 1 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_loss_weight 0 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --max_steps 20000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
