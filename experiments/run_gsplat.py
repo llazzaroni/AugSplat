@@ -94,7 +94,9 @@ def _run_single_mode(
         for k in runner.splats.keys():
             runner.splats[k].data = torch.cat([ckpt["splats"][k] for ckpt in ckpts])
         step = ckpts[0]["step"]
-        runner.eval(step=step)
+        runner.eval(step=step, stage="val", split="val")
+        if cfg.render_train_split_on_ckpt_eval:
+            runner.eval(step=step, stage="train", split="train")
         runner.render_traj(step=step)
         if cfg.compression is not None:
             runner.run_compression(step=step)

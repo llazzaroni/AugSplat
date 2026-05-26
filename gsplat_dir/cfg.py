@@ -84,6 +84,8 @@ class Config:
     ply_steps: List[int] = field(default_factory=lambda: [])
     # Whether to disable video generation during training and evaluation
     disable_video: bool = False
+    # When running eval-only from --ckpt, also render the training split.
+    render_train_split_on_ckpt_eval: bool = True
 
     # Initialization strategy
     init_type: str = "sfm"

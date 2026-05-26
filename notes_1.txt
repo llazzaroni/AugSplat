@@ -1173,7 +1173,7 @@ python -m experiments.run_gsplat default \
   --dual_runner \
   --no-nerf_init \
   --data_dir /cluster/scratch/rbollati/new_exp/360_v2/garden_sparse_aug \
-  --result_dir /cluster/scratch/rbollati/new_exp/models_garden/gsplat_eval \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_garden/gsplat_staged_eval \
   --pt_path /cluster/scratch/rbollati/new_exp/models_garden/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/garden/ray_sample.pt \
   --data_factor 1 \
   --nerf_samples_data_factor 8 \
@@ -1187,7 +1187,7 @@ python -m experiments.run_gsplat default \
   --deterministic \
   --disable_viewer \
   --disable_video \
-  --ckpt /cluster/scratch/rbollati/new_exp/models_garden/gsplat/ckpts/best_ckpt_rank0.pt
+  --ckpt /cluster/scratch/rbollati/new_exp/models_garden/gsplat_staged_1/ckpts/best_ckpt_rank0.pt
 
 
 python -m experiments.run_gsplat default \

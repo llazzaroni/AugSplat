@@ -812,7 +812,7 @@ class Runner:
             
 
     @torch.no_grad()
-    def eval(self, step: int, stage: str = "val"):
+    def eval(self, step: int, stage: str = "val", split: str = "val"):
         """Entry for evaluation."""
         print("Running evaluation...")
         cfg = self.cfg
@@ -820,8 +820,15 @@ class Runner:
         world_rank = self.world_rank
         world_size = self.world_size
 
+        if split == "val":
+            dataset = self.valset
+        elif split == "train":
+            dataset = self.trainset
+        else:
+            raise ValueError(f"Unsupported eval split: {split}")
+
         valloader = torch.utils.data.DataLoader(
-            self.valset, batch_size=1, shuffle=False, num_workers=1
+            dataset, batch_size=1, shuffle=False, num_workers=1
         )
         ellipse_time = 0
         metrics = defaultdict(list)
