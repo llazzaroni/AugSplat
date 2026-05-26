@@ -1145,12 +1145,13 @@ python -m experiments.run_gsplat default \
   --disable_viewer
 
 python ~/RadSplat/RadSplat/utils/plot_gsplat_eval_stats.py \
-  --run-dir /cluster/scratch/rbollati/new_exp/models_stump/gsplat \
+  --run-dir /cluster/scratch/rbollati/new_exp/models_garden/gsplat \
   --label 3DGS \
-  --run-dir /cluster/scratch/rbollati/new_exp/models_stump/gsplat_dual_1 \
+  --run-dir /cluster/scratch/rbollati/new_exp/models_garden/gsplat_dual_1 \
   --label "AugSplat dual" \
-  --run-dir /cluster/scratch/rbollati/new_exp/models_stump/gsplat_staged_1 \
-  --label AugSplat staged" \
+  --run-dir /cluster/scratch/rbollati/new_exp/models_garden/gsplat_staged_1 \
+  --label "AugSplat staged" \
+  --source aggregate \
   --plot-style lines \
   --max-step 15000 \
   --out-dir /cluster/scratch/rbollati/new_exp/models_flowers/gsplat_compare_plots
@@ -1171,9 +1172,9 @@ python utils/report_gsplat_reference_metrics.py \
 python -m experiments.run_gsplat default \
   --dual_runner \
   --no-nerf_init \
-  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/kitchen_sparse_aug \
-  --result_dir /cluster/scratch/rbollati/new_exp/models_kitchen/gsplat \
-  --pt_path /cluster/scratch/rbollati/new_exp/models_kitchen/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/stump/ray_sample.pt \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/garden_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_garden/gsplat_eval \
+  --pt_path /cluster/scratch/rbollati/new_exp/models_garden/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/garden/ray_sample.pt \
   --data_factor 1 \
   --nerf_samples_data_factor 8 \
   --batch_size 1 \
@@ -1186,7 +1187,7 @@ python -m experiments.run_gsplat default \
   --deterministic \
   --disable_viewer \
   --disable_video \
-  --ckpt /cluster/scratch/rbollati/new_exp/models_kitchen/gsplat/ckpts/best_ckpt_rank0.pt
+  --ckpt /cluster/scratch/rbollati/new_exp/models_garden/gsplat/ckpts/best_ckpt_rank0.pt
 
 
 python -m experiments.run_gsplat default \
@@ -1195,24 +1196,6 @@ python -m experiments.run_gsplat default \
   --data_dir /cluster/scratch/rbollati/new_exp/360_v2/kitchen_sparse_aug \
   --result_dir /cluster/scratch/rbollati/new_exp/models_kitchen/gsplat \
   --pt_path /cluster/scratch/rbollati/new_exp/models_kitchen/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/kitchen/ray_sample.pt \
-  --data_factor 1 \
-  --nerf_samples_data_factor 8 \
-  --batch_size 1 \
-  --nerf_batch_factor 20 \
-  --dual_nerf_loss_weight 0 \
-  --dual_nerf_decay_steps_to_quarter 300 \
-  --dual_nerf_disable_threshold 0.1 \
-  --max_steps 1250 \
-  --strategy.reset_every 100000000 \
-  --deterministic \
-  --disable_viewer
-
-python -m experiments.run_gsplat default \
-  --dual_runner \
-  --no-nerf_init \
-  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/garden_sparse_aug \
-  --result_dir /cluster/scratch/rbollati/new_exp/models_garden/gsplat_dual_1 \
-  --pt_path /cluster/scratch/rbollati/new_exp/models_garden/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/kitchen/ray_sample.pt \
   --data_factor 1 \
   --nerf_samples_data_factor 8 \
   --batch_size 1 \
@@ -1226,12 +1209,30 @@ python -m experiments.run_gsplat default \
   --disable_viewer
 
 python -m experiments.run_gsplat default \
+  --dual_runner \
+  --no-nerf_init \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/garden_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_garden/gsplat_dual_1 \
+  --pt_path /cluster/scratch/rbollati/new_exp/models_garden/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/garden/ray_sample.pt \
+  --data_factor 1 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_loss_weight 2 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --max_steps 10000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python -m experiments.run_gsplat default \
   --no-nerf_init \
   --dual_runner \
   --staged-runner \
   --data_dir /cluster/scratch/rbollati/new_exp/360_v2/garden_sparse_aug \
   --result_dir /cluster/scratch/rbollati/new_exp/models_garden/gsplat_staged_1\
-  --pt_path /cluster/scratch/rbollati/new_exp/models_garden/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/kitchen/ray_sample.pt \
+  --pt_path /cluster/scratch/rbollati/new_exp/models_garden/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/garden/ray_sample.pt \
   --data_factor 1 \
   --staged_nerf_phase_steps 300 \
   --staged_real_phase_steps 15000 \
@@ -1241,7 +1242,7 @@ python -m experiments.run_gsplat default \
   --dual_nerf_decay_steps_to_quarter 300 \
   --dual_nerf_disable_threshold 0.1 \
   --dual_nerf_loss_weight 0 \
-  --max_steps 1250 \
+  --max_steps 10000 \
   --strategy.reset_every 100000000 \
   --deterministic \
   --disable_viewer
