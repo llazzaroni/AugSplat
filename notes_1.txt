@@ -1250,3 +1250,35 @@ python -m experiments.run_gsplat default \
   --deterministic \
   --disable_viewer \
   --save-last-ckpt
+
+python analysis/report_gsplat_reference_metrics.py \
+  --run-dir /cluster/scratch/rbollati/new_exp/models_bicycle/gsplat \
+  --run-dir /cluster/scratch/rbollati/new_exp/models_bicycle/gsplat_dual_1 \
+  --run-dir /cluster/scratch/rbollati/new_exp/models_bicycle/gsplat_staged_1 \
+  --run-dir /cluster/scratch/rbollati/new_exp/models_bicycle/gsplat_staged_2 \
+  --label gsplat \
+  --label dual_1 \
+  --label staged_1 \
+  --label staged_2 \
+  --reference-run-dir /cluster/scratch/rbollati/new_exp/models_bicycle/gsplat \
+  --source auto \
+  --stage val \
+  --step-interval 100
+
+python - <<'PY'
+from pathlib import Path
+import numpy as np
+from PIL import Image
+
+inp = Path("/cluster/scratch/rbollati/new_exp/360_v2/garden_sparse_aug/weights_nerf_samples_8/nerf_sample_019.npy")   # change this
+out = inp.with_name(inp.stem + "_bw_inverse.png")
+
+w = np.load(inp).astype(np.float32)
+w = w - w.min()
+if w.max() > 0:
+    w = w / w.max()
+
+img = ((1.0 - w) * 255).clip(0, 255).astype(np.uint8)
+Image.fromarray(img, mode="L").save(out)
+print(out)
+PY

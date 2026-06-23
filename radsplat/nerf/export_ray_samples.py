@@ -22,7 +22,7 @@ warnings.filterwarnings(
 
 def create_parser():
     parser = argparse.ArgumentParser(
-        description="parser"
+        description="Export NeRF-derived initialization samples and/or the train/val split payload used by gsplat."
     )
 
     parser.add_argument(
@@ -30,7 +30,7 @@ def create_parser():
         "-nf",
         type=str,
         required=True,
-        help="Folder containing the config.yml file to set up the nerf model"
+        help="Path to the Nerfstudio config.yml used to load the NeRF model."
     )
 
     parser.add_argument(
@@ -38,15 +38,15 @@ def create_parser():
         "-o",
         type=str,
         required=True,
-        help="name of the output file"
+        help="Output .pt payload path."
     )
 
     parser.add_argument(
         "--sampling-size",
         "-n",
         type=int,
-        required=True,
-        help="number of rays to sample"
+        default=0,
+        help="Number of rays to sample. Required unless --split-only is set."
     )
 
     parser.add_argument(
@@ -54,7 +54,7 @@ def create_parser():
         "-s",
         type=str,
         required=False,
-        help="name odf the filter to use: canny | sobel | mixed-sobel | mixed-canny"
+        help="Sampling strategy: canny | sobel | mixed-sobel | mixed-canny | patches | random"
     )
 
     parser.add_argument(
@@ -62,7 +62,13 @@ def create_parser():
         "-pr",
         type=float,
         required=False,
-        help="name odf the filter to use: canny | sobel | mixed-sobel | mixed-canny"
+        help="Random-ray share for mixed samplers."
+    )
+
+    parser.add_argument(
+        "--split-only",
+        action="store_true",
+        help="Only export train/val split metadata for gsplat without sampling NeRF rays.",
     )
 
     return parser
@@ -92,57 +98,59 @@ def main():
     dpo = model.pipeline.datamanager.train_dataparser_outputs
     test_split = getattr(model.pipeline.datamanager, "test_split", "test")
     test_dpo = model.pipeline.datamanager.dataparser.get_dataparser_outputs(split=test_split)
-    # smple points
+    xyzrgb = None
 
-    if args.ray_sampling_strategy == "canny":
-        coords = canny_edge_detector_sampler(model.pipeline.datamanager, N_RAYS, model.device)
-    elif args.ray_sampling_strategy == "sobel":
-        coords = sobel_edge_detector_sampler(model.pipeline.datamanager, N_RAYS, model.device)
-    elif args.ray_sampling_strategy == "mixed-sobel":
-        coords = mixed_sampler(model.pipeline.datamanager, N_RAYS, share_rnd = args.percentage_random, edge_detector = "sobel", device = model.device)
-    elif args.ray_sampling_strategy == "mixed-canny":
-        coords = mixed_sampler(model.pipeline.datamanager, N_RAYS, share_rnd = args.percentage_random, edge_detector = "canny", device = model.device)
-    elif args.ray_sampling_strategy == "patches":
-        coords = patched_sampler(model.pipeline.datamanager, N_RAYS, model.device, 32, 16)
-    else:
-        coords = random_sampler(model.pipeline.datamanager, N_RAYS, model.device)
+    if not args.split_only:
+        if N_RAYS <= 0:
+            raise ValueError("--sampling-size must be > 0 unless --split-only is set.")
+
+        if args.ray_sampling_strategy == "canny":
+            coords = canny_edge_detector_sampler(model.pipeline.datamanager, N_RAYS, model.device)
+        elif args.ray_sampling_strategy == "sobel":
+            coords = sobel_edge_detector_sampler(model.pipeline.datamanager, N_RAYS, model.device)
+        elif args.ray_sampling_strategy == "mixed-sobel":
+            coords = mixed_sampler(model.pipeline.datamanager, N_RAYS, share_rnd = args.percentage_random, edge_detector = "sobel", device = model.device)
+        elif args.ray_sampling_strategy == "mixed-canny":
+            coords = mixed_sampler(model.pipeline.datamanager, N_RAYS, share_rnd = args.percentage_random, edge_detector = "canny", device = model.device)
+        elif args.ray_sampling_strategy == "patches":
+            coords = patched_sampler(model.pipeline.datamanager, N_RAYS, model.device, 32, 16)
+        else:
+            coords = random_sampler(model.pipeline.datamanager, N_RAYS, model.device)
+
+        xyzrgb_chunks = []
+        for b in range(n_batches):
+
+            # get initial and final index of the index rays to query
+            s = b * BATCH_SIZE
+            e = min((b + 1) * BATCH_SIZE, N_RAYS)
+            if s >= e:
+                break
+            batch_rays_indexes = coords[s:e, :]
+
+            logging.info('sampling rays')
+            rays = model.create_rays(batch_rays_indexes)
+
+            logging.info('sampling points')
+
+            sampled = model.sample_points(rays)
+            outputs, field_outputs, weights  = model.evaluate_points(sampled)
+
+            logging.info('init gs')
+            gs_initializer = Initializer(weights, sampled)
+
+            logging.info('compute trasmittance')
+            trasmittance = gs_initializer.compute_transmittance()
+
+            logging.info('computer initial_position')
+            initial_position = gs_initializer.compute_inital_positions(trasmittance, 0.5)
+
+            xyzrgb_batch = torch.cat([initial_position, outputs['rgb']], dim=-1)
+
+            xyzrgb_chunks.append(xyzrgb_batch.detach().cpu())
 
 
-    xyzrgb_chunks = []
-    for b in range(n_batches):
-
-        # get initial and final index of the index rays to query
-        s = b * BATCH_SIZE
-        e = min((b + 1) * BATCH_SIZE, N_RAYS)
-        if s >= e:
-            break
-        batch_rays_indexes = coords[s:e, :]
-        B = batch_rays_indexes.shape[0]
-
-        logging.info('sampling rays')
-        rays = model.create_rays(batch_rays_indexes)
-
-        logging.info('sampling points')
-
-        sampled = model.sample_points(rays)
-        outputs, field_outputs, weights  = model.evaluate_points(sampled)
-
-        logging.info('init gs')
-        gs_initializer = Initializer(weights, sampled)
-
-        logging.info('compute trasmittance')
-        trasmittance = gs_initializer.compute_transmittance()
-
-        logging.info('computer initial_position')
-        initial_position = gs_initializer.compute_inital_positions(trasmittance, 0.5)
-
-        xyzrgb_batch = torch.cat([initial_position, outputs['rgb']], dim=-1)
-
-        xyzrgb_chunks.append(xyzrgb_batch.detach().cpu())
-
-
-    xyzrgb = torch.cat(xyzrgb_chunks, dim=0)
-    print("number of rays:", xyzrgb.shape[0])
+        xyzrgb = torch.cat(xyzrgb_chunks, dim=0)
+        print("number of rays:", xyzrgb.shape[0])
 
     image_filenames_abs = [str(p) for p in dpo.image_filenames]
     image_filenames_rel = [rel_to_images_root(p) for p in image_filenames_abs]
@@ -157,7 +165,6 @@ def main():
         split_by_image_rel.setdefault(name, test_split)
 
     payload = {
-        "xyzrgb": xyzrgb.cpu(),
         "camera_to_worlds": cams.camera_to_worlds.cpu(),
         "K": cams.get_intrinsics_matrices().cpu(),
         "image_filenames_abs": image_filenames_abs,
@@ -169,6 +176,8 @@ def main():
         "val_image_filenames_rel": val_image_filenames_rel,
         "split_by_image_rel": split_by_image_rel,
     }
+    if xyzrgb is not None:
+        payload["xyzrgb"] = xyzrgb.cpu()
 
     logging.info('saving initial positions')
     torch.save(payload, RAYS_BATCH_NAME)
