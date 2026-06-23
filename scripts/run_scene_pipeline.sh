@@ -9,7 +9,7 @@ die() {
   printf '[radsplat-pipeline] ERROR: %s\n' "$*" >&2
   exit 1
 }
-
+lol
 usage() {
   cat <<'EOF'
 Usage:
