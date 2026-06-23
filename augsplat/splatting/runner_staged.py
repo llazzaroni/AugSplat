@@ -11,8 +11,8 @@ from fused_ssim import fused_ssim
 from torch.utils.data import DataLoader, Subset
 from typing_extensions import assert_never
 
-from radsplat.splatting.colmap_dataset import Dataset as ColmapDataset
-from radsplat.splatting.runner import Runner, _seed_worker
+from augsplat.splatting.colmap_dataset import Dataset as ColmapDataset
+from augsplat.splatting.runner import Runner, _seed_worker
 from submodules.gsplat.gsplat.strategy import DefaultStrategy, MCMCStrategy
 
 try:

@@ -10,9 +10,9 @@ import torch
 import tyro
 from torch.nn.parallel import DistributedDataParallel as DDP
 
-from radsplat.splatting.config import Config
-from radsplat.splatting.runner_dual import RunnerDual
-from radsplat.splatting.runner_staged import RunnerStaged
+from augsplat.splatting.config import Config
+from augsplat.splatting.runner_dual import RunnerDual
+from augsplat.splatting.runner_staged import RunnerStaged
 from submodules.gsplat.gsplat.distributed import cli
 from submodules.gsplat.gsplat.strategy import DefaultStrategy, MCMCStrategy
 

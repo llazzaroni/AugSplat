@@ -2,11 +2,11 @@
 set -euo pipefail
 
 log() {
-  printf '[radsplat-pipeline] %s\n' "$*" >&2
+  printf '[augsplat-pipeline] %s\n' "$*" >&2
 }
 
 die() {
-  printf '[radsplat-pipeline] ERROR: %s\n' "$*" >&2
+  printf '[augsplat-pipeline] ERROR: %s\n' "$*" >&2
   exit 1
 }
 

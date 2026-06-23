@@ -15,7 +15,7 @@ import tqdm
 import viser
 import yaml
 #from submodules.gsplat.examples.datasets.colmap import Dataset, Parser
-from radsplat.splatting.colmap_dataset import Dataset, Parser
+from augsplat.splatting.colmap_dataset import Dataset, Parser
 from submodules.gsplat.examples.datasets.traj import (
     generate_ellipse_path_z,
     generate_interpolated_path,
@@ -47,8 +47,8 @@ from submodules.gsplat.examples.gsplat_viewer import GsplatViewer, GsplatRenderT
 from nerfview import CameraState, RenderTabState, apply_float_colormap
 
 
-from radsplat.splatting.config import Config
-from radsplat.splatting.create_splats import create_splats_with_optimizers
+from augsplat.splatting.config import Config
+from augsplat.splatting.create_splats import create_splats_with_optimizers
 
 
 def _seed_worker(worker_id: int) -> None:

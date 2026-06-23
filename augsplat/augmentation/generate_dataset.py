@@ -11,7 +11,7 @@ import shutil
 from pathlib import Path
 import matplotlib.pyplot as plt
 
-from radsplat.nerf.models import Nerfacto
+from augsplat.nerf.models import Nerfacto
 from nerfstudio.cameras.cameras import Cameras
 from nerfstudio.data.utils import colmap_parsing_utils as colmap
 from nerfstudio.data.utils.colmap_parsing_utils import rotmat2qvec
@@ -966,7 +966,7 @@ def build_parser():
     p.add_argument(
         "--model-roots",
         nargs="+",
-        help="Scene-level roots such as models_bicycle. Each root is expected to contain "
+        help="Scene-level roots such as bicycle_sparse_artifacts/nerf_models. Each root is expected to contain "
              "nerf_ensemble_1..N, and config.yml files are discovered automatically.",
     )
     p.add_argument(

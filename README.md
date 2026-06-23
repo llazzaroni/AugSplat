@@ -1,16 +1,16 @@
-# RadSplat
+# AugSplat
 
-RadSplat is a small pipeline for:
+AugSplat implements the method presented in *add the link later*. It:
 
-1. preparing a COLMAP-style dataset with VGGT,
-2. training a NeRF ensemble with Nerfstudio,
-3. generating synthetic views from the ensemble,
-4. exporting the same train/validation split to gsplat, and
-5. training AugSplat variants on the augmented dataset.
+1. prepares a COLMAP-style dataset with VGGT,
+2. trains a NeRF ensemble with Nerfstudio,
+3. generates synthetic views from the ensemble,
+4. exports the same train/validation split to gsplat, and
+5. trains AugSplat variants on the augmented dataset.
 
 The repository is organized as a normal public project:
 
-- `radsplat/`: library code
+- `augsplat/`: library code
 - `scripts/`: runnable entrypoints
 - `analysis/`: reporting and plotting utilities
 - `submodules/`: vendored third-party dependencies
@@ -18,16 +18,17 @@ The repository is organized as a normal public project:
 ## Repository Layout
 
 ```text
-RadSplat/
+AugSplat/
 ├── analysis/
 │   ├── plot_gsplat_eval_stats.py
 │   ├── rank_gsplat_combo.py
 │   ├── report_best_nerf_ensemble.py
 │   └── report_gsplat_reference_metrics.py
-├── radsplat/
+├── augsplat/
 │   ├── augmentation/
 │   ├── nerf/
 │   └── splatting/
+├── envs/
 ├── scripts/
 │   ├── augment_dataset.py
 │   ├── export_nerf_rays.py
@@ -47,6 +48,21 @@ The pipeline assumes three conda environments:
 - `gsplat`: gsplat / AugSplat training
 
 The orchestration script switches between these environments automatically.
+
+## Repository Setup
+
+Clone the repository together with its required submodules:
+
+```bash
+git clone --recurse-submodules <repo-url>
+cd AugSplat
+```
+
+If you already cloned the repository without submodules, run:
+
+```bash
+git submodule update --init --recursive
+```
 
 Environment specs are provided under [`envs/`](./envs):
 
@@ -375,11 +391,11 @@ Compare gsplat runs:
 
 ```bash
 python analysis/report_gsplat_reference_metrics.py \
-  --run-dir /cluster/scratch/rbollati/new_exp/models_bicycle/gsplat \
-  --run-dir /cluster/scratch/rbollati/new_exp/models_bicycle/gsplat_dual_1 \
-  --label gsplat \
-  --label dual_1 \
-  --reference-run-dir /cluster/scratch/rbollati/new_exp/models_bicycle/gsplat \
+  --run-dir /cluster/scratch/rbollati/new_exp/bicycle_sparse_artifacts/gsplat_staged \
+  --run-dir /cluster/scratch/rbollati/new_exp/bicycle_sparse_artifacts/gsplat_dual \
+  --label staged \
+  --label dual \
+  --reference-run-dir /cluster/scratch/rbollati/new_exp/bicycle_sparse_artifacts/gsplat_staged \
   --source auto \
   --stage val \
   --step-interval 100
@@ -389,20 +405,20 @@ Plot gsplat statistics:
 
 ```bash
 python analysis/plot_gsplat_eval_stats.py \
-  --run-dir /cluster/scratch/rbollati/new_exp/models_garden/gsplat \
-  --label 3DGS \
-  --run-dir /cluster/scratch/rbollati/new_exp/models_garden/gsplat_dual_1 \
+  --run-dir /cluster/scratch/rbollati/new_exp/garden_sparse_artifacts/gsplat_staged \
+  --label "AugSplat staged" \
+  --run-dir /cluster/scratch/rbollati/new_exp/garden_sparse_artifacts/gsplat_dual \
   --label "AugSplat dual" \
   --plot-style lines \
   --max-step 15000 \
-  --out-dir /cluster/scratch/rbollati/new_exp/models_garden/gsplat_compare_plots
+  --out-dir /cluster/scratch/rbollati/new_exp/garden_sparse_artifacts/gsplat_compare_plots
 ```
 
 Report the best NeRF checkpoint in an ensemble:
 
 ```bash
 python analysis/report_best_nerf_ensemble.py \
-  --model-root /cluster/scratch/rbollati/new_exp/models_flowers
+  --model-root /cluster/scratch/rbollati/new_exp/flowers_sparse_artifacts/nerf_models
 ```
 
 ## Notes
@@ -412,3 +428,7 @@ python analysis/report_best_nerf_ensemble.py \
 - Carefully selecting the best NeRF checkpoint instead of the latest one can improve the final augmented dataset, but that requires either a patched Nerfstudio installation or an external checkpoint-selection workflow.
 - By default, the pipeline keeps all intermediate artifacts for debugging and analysis.
 - `notes_1.txt` is kept as an internal lab notebook and is not part of the public API.
+
+## Package Name
+
+The public repository and the importable Python package are both named `augsplat`.

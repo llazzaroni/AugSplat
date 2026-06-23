@@ -3,15 +3,15 @@ import math
 import torch
 import logging
 
-from radsplat.nerf.models import Nerfacto
-from radsplat.nerf.point_samplers import (
+from augsplat.nerf.models import Nerfacto
+from augsplat.nerf.point_samplers import (
     sobel_edge_detector_sampler,
     canny_edge_detector_sampler,
     random_sampler,
     mixed_sampler,
     patched_sampler,
 )
-from radsplat.nerf.gs_initializer import Initializer
+from augsplat.nerf.gs_initializer import Initializer
 from pathlib import Path
 import argparse
 

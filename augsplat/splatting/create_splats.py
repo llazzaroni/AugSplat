@@ -8,7 +8,7 @@ from submodules.gsplat.examples.datasets.colmap import Parser
 from submodules.gsplat.examples.utils import knn, rgb_to_sh
 from submodules.gsplat.gsplat.optimizers import SelectiveAdam
 
-from radsplat.splatting.align import umeyama_align
+from augsplat.splatting.align import umeyama_align
 
 def _norm_name(p: str) -> str:
     # normalize to compare across jpg/png, case, and nested dirs

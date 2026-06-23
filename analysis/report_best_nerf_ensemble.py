@@ -64,7 +64,7 @@ def main() -> None:
         "--model-root",
         required=True,
         type=Path,
-        help="Scene-level root such as /cluster/.../models_flowers",
+        help="Scene-level artifact root such as /cluster/.../flowers_sparse_artifacts/nerf_models",
     )
     parser.add_argument(
         "--max-step",
