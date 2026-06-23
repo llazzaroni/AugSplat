@@ -29,13 +29,13 @@ NeRF options:
   --num-ensembles N              Number of NeRF ensemble models. Default: 5
   --nerf-method NAME             nerfacto | depth-nerfacto. Default: nerfacto
   --nerf-max-steps N             Nerfstudio max iterations. Default: 15000
-  --nerf-save-every N            Save interval. Default: 200
+  --nerf-save-every N            Save interval. Default: --nerf-max-steps
   --nerf-eval-every N            Full-val interval. Default: 200
 
 Augmentation options:
   --checkpoint-selection MODE    latest | best. Default: latest
   --checkpoint-step N            Force a specific checkpoint step for all ensemble models.
-  --camera-id N                  Required for multi-camera COLMAP datasets.
+  --camera-id N                  COLMAP camera model id for synthetic views. Default: 1
   --num-final-samples N          Number of synthetic views to keep. Default: 200
   --tau FLOAT                    Weight-map temperature. Default: 1.5
   --final-render-scale FLOAT     Final synthetic render scale. Default: 0.125
@@ -74,12 +74,12 @@ GSPLAT_ENV="gsplat"
 NUM_ENSEMBLES=5
 NERF_METHOD="nerfacto"
 NERF_MAX_STEPS=15000
-NERF_SAVE_EVERY=200
+NERF_SAVE_EVERY=""
 NERF_EVAL_EVERY=200
 
 CHECKPOINT_SELECTION="latest"
 CHECKPOINT_STEP=""
-CAMERA_ID=""
+CAMERA_ID="1"
 NUM_FINAL_SAMPLES=200
 TAU="1.5"
 FINAL_RENDER_SCALE="0.125"
@@ -170,6 +170,9 @@ if [[ -z "$DUAL_NERF_LOSS_WEIGHT" ]]; then
 fi
 if [[ -z "$STAGED_REAL_PHASE_STEPS" ]]; then
   STAGED_REAL_PHASE_STEPS="$SPLAT_MAX_STEPS"
+fi
+if [[ -z "$NERF_SAVE_EVERY" ]]; then
+  NERF_SAVE_EVERY="$NERF_MAX_STEPS"
 fi
 
 VGGT_DIR="${SCENE_PARENT}/${SCENE_TAG}_vggt"
@@ -298,7 +301,7 @@ train_nerf_ensemble() {
         --steps-per-eval-all-images "${NERF_EVAL_EVERY}" \
         --steps-per-eval-image 0 \
         --max-num-iterations "${NERF_MAX_STEPS}" \
-        --save-only-latest-checkpoint False \
+        --save-only-latest-checkpoint True \
         --logging.steps-per-log 100 \
         --logging.profiler pytorch \
         colmap \
@@ -315,7 +318,7 @@ train_nerf_ensemble() {
         --steps-per-eval-all-images "${NERF_EVAL_EVERY}" \
         --steps-per-eval-image 0 \
         --max-num-iterations "${NERF_MAX_STEPS}" \
-        --save-only-latest-checkpoint False \
+        --save-only-latest-checkpoint True \
         --logging.steps-per-log 100 \
         --logging.profiler pytorch \
         colmap \

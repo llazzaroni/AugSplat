@@ -1010,8 +1010,8 @@ def build_parser():
     p.add_argument(
         "--camera-id",
         type=int,
-        default=None,
-        help="Explicit COLMAP camera_id to assign to generated NeRF samples. Required when the input COLMAP model has multiple cameras.",
+        default=1,
+        help="COLMAP camera_id to assign to generated NeRF samples. Default: 1.",
     )
     return p
 

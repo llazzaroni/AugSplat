@@ -134,7 +134,8 @@ By default the pipeline:
 
 - prepares the VGGT dataset if needed,
 - trains `5` `nerfacto` models for `15000` steps,
-- saves/evaluates NeRF checkpoints every `200` steps,
+- saves only the final NeRF checkpoint at step `15000`,
+- evaluates NeRF validation metrics every `200` steps,
 - generates `200` synthetic views,
 - exports the train/val split payload for gsplat,
 - trains the staged AugSplat variant,
@@ -146,8 +147,7 @@ Train the default staged AugSplat pipeline:
 
 ```bash
 bash scripts/run_scene_pipeline.sh \
-  --data-dir /cluster/scratch/rbollati/new_exp/360_v2/garden_sparse \
-  --camera-id 1
+  --data-dir /cluster/scratch/rbollati/new_exp/360_v2/garden_sparse
 ```
 
 Train `depth-nerfacto` instead of `nerfacto`:
@@ -155,8 +155,7 @@ Train `depth-nerfacto` instead of `nerfacto`:
 ```bash
 bash scripts/run_scene_pipeline.sh \
   --data-dir /cluster/scratch/rbollati/new_exp/360_v2/bicycle_sparse \
-  --nerf-method depth-nerfacto \
-  --camera-id 1
+  --nerf-method depth-nerfacto
 ```
 
 Run the dual AugSplat variant:
@@ -165,8 +164,7 @@ Run the dual AugSplat variant:
 bash scripts/run_scene_pipeline.sh \
   --data-dir /cluster/scratch/rbollati/new_exp/360_v2/garden_sparse \
   --splat-mode dual \
-  --dual-nerf-loss-weight 2 \
-  --camera-id 1
+  --dual-nerf-loss-weight 2
 ```
 
 Use a larger NeRF ensemble and a custom gsplat schedule:
@@ -177,8 +175,7 @@ bash scripts/run_scene_pipeline.sh \
   --num-ensembles 8 \
   --nerf-max-steps 20000 \
   --splat-max-steps 15000 \
-  --staged-nerf-phase-steps 500 \
-  --camera-id 1
+  --staged-nerf-phase-steps 500
 ```
 
 Delete intermediate artifacts after gsplat training and keep only the final gsplat result:
@@ -186,8 +183,7 @@ Delete intermediate artifacts after gsplat training and keep only the final gspl
 ```bash
 bash scripts/run_scene_pipeline.sh \
   --data-dir /cluster/scratch/rbollati/new_exp/360_v2/garden_sparse \
-  --cleanup-intermediate \
-  --camera-id 1
+  --cleanup-intermediate
 ```
 
 ## Pipeline Semantics
@@ -232,13 +228,15 @@ The augmentation step uses:
 python scripts/augment_dataset.py ...
 ```
 
-By default the pipeline selects the **latest** NeRF checkpoint because that always works. You can switch to:
+By default the pipeline selects the **latest** NeRF checkpoint because that always works and matches the public training setup, which only keeps the final checkpoint.
+
+You can switch to:
 
 ```bash
 --checkpoint-selection best
 ```
 
-if your Nerfstudio installation writes `eval_all_images.jsonl` for each run. You can also force a step with:
+if your Nerfstudio installation writes `eval_all_images.jsonl` for each run and you intentionally save multiple checkpoints. You can also force a step with:
 
 ```bash
 --checkpoint-step 2400
@@ -314,7 +312,6 @@ python scripts/augment_dataset.py \
   --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/bicycle_sparse_aug \
   --tmp-root /cluster/home/rbollati/tmp \
   --tau 1.5 \
-  --camera-id 1 \
   --debug-plot-dir /cluster/scratch/rbollati/new_exp/360_v2/bicycle_sparse_artifacts/image_supervision \
   --num-final-samples 200 \
   --final-render-scale 0.125
@@ -410,8 +407,8 @@ python analysis/report_best_nerf_ensemble.py \
 
 ## Notes
 
-- `--camera-id` is strongly recommended for multi-camera COLMAP datasets.
+- By default, synthetic views are assigned to COLMAP camera model id `1`. Override `--camera-id` if your dataset uses a different shared intrinsics entry.
 - If you want to use `--checkpoint-selection best`, make sure your Nerfstudio setup writes `eval_all_images.jsonl`.
+- Carefully selecting the best NeRF checkpoint instead of the latest one can improve the final augmented dataset, but that requires either a patched Nerfstudio installation or an external checkpoint-selection workflow.
 - By default, the pipeline keeps all intermediate artifacts for debugging and analysis.
-- `--camera-id 1` means “assign the synthetic views to COLMAP camera model id 1”, i.e. reuse that intrinsics entry for all generated `nerf_sample_*` images.
 - `notes_1.txt` is kept as an internal lab notebook and is not part of the public API.
