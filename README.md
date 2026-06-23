@@ -48,6 +48,65 @@ The pipeline assumes three conda environments:
 
 The orchestration script switches between these environments automatically.
 
+Environment specs are provided under [`envs/`](./envs):
+
+- [`envs/vggt.yml`](./envs/vggt.yml)
+- [`envs/nerfstudio.yml`](./envs/nerfstudio.yml)
+- [`envs/gsplat.yml`](./envs/gsplat.yml)
+
+### Create the Environments
+
+Create the three environments with:
+
+```bash
+conda env create -f envs/vggt.yml
+conda env create -f envs/nerfstudio.yml
+conda env create -f envs/gsplat.yml
+```
+
+### Alternative Installs
+
+Install Nerfstudio from PyPI:
+
+```bash
+conda create -n nerfstudio python=3.8 -y
+conda activate nerfstudio
+pip install nerfstudio
+```
+
+Install Nerfstudio from source:
+
+```bash
+git clone https://github.com/nerfstudio-project/nerfstudio.git
+cd nerfstudio
+pip install --upgrade pip setuptools
+pip install -e .
+```
+
+Install gsplat from PyPI:
+
+```bash
+conda create -n gsplat python=3.10 -y
+conda activate gsplat
+pip install gsplat
+```
+
+Install gsplat from source:
+
+```bash
+conda create -n gsplat python=3.10 -y
+conda activate gsplat
+pip install git+https://github.com/nerfstudio-project/gsplat.git
+```
+
+Install VGGT manually:
+
+```bash
+conda create -n vggt python=3.10 -y
+conda activate vggt
+pip install -r envs/vggt-requirements.txt
+```
+
 ## Quick Start
 
 The main entrypoint is:

@@ -1,0 +1,10 @@
+name: nerfstudio
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+dependencies:
+  - python=3.8
+  - pip
+  - pip:
+      - nerfstudio

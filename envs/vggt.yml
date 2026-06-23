@@ -1,0 +1,10 @@
+name: vggt
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+      - -r envs/vggt-requirements.txt
