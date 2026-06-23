@@ -22,7 +22,6 @@ AugSplat/
 ├── analysis/
 │   ├── plot_gsplat_eval_stats.py
 │   ├── rank_gsplat_combo.py
-│   ├── report_best_nerf_ensemble.py
 │   └── report_gsplat_reference_metrics.py
 ├── augsplat/
 │   ├── augmentation/
@@ -151,7 +150,6 @@ By default the pipeline:
 - prepares the VGGT dataset if needed,
 - trains `5` `nerfacto` models for `15000` steps,
 - saves only the final NeRF checkpoint at step `15000`,
-- evaluates NeRF validation metrics every `200` steps,
 - generates `200` synthetic views,
 - exports the train/val split payload for gsplat,
 - trains the staged AugSplat variant,
@@ -244,15 +242,7 @@ The augmentation step uses:
 python scripts/augment_dataset.py ...
 ```
 
-By default the pipeline selects the **latest** NeRF checkpoint because that always works and matches the public training setup, which only keeps the final checkpoint.
-
-You can switch to:
-
-```bash
---checkpoint-selection best
-```
-
-if your Nerfstudio installation writes `eval_all_images.jsonl` for each run and you intentionally save multiple checkpoints. You can also force a step with:
+By default the pipeline selects the **latest** NeRF checkpoint because the public training setup keeps only the final checkpoint. You can also force a step with:
 
 ```bash
 --checkpoint-step 2400
@@ -323,7 +313,6 @@ Generate an augmented dataset from an ensemble:
 ```bash
 python scripts/augment_dataset.py \
   --model-roots /cluster/scratch/rbollati/new_exp/360_v2/bicycle_sparse_artifacts/nerf_models \
-  --checkpoint-selection latest \
   --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/bicycle_sparse_vggt \
   --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/bicycle_sparse_aug \
   --tmp-root /cluster/home/rbollati/tmp \
@@ -414,18 +403,10 @@ python analysis/plot_gsplat_eval_stats.py \
   --out-dir /cluster/scratch/rbollati/new_exp/garden_sparse_artifacts/gsplat_compare_plots
 ```
 
-Report the best NeRF checkpoint in an ensemble:
-
-```bash
-python analysis/report_best_nerf_ensemble.py \
-  --model-root /cluster/scratch/rbollati/new_exp/flowers_sparse_artifacts/nerf_models
-```
-
 ## Notes
 
 - By default, synthetic views are assigned to COLMAP camera model id `1`. Override `--camera-id` if your dataset uses a different shared intrinsics entry.
-- If you want to use `--checkpoint-selection best`, make sure your Nerfstudio setup writes `eval_all_images.jsonl`.
-- Carefully selecting the best NeRF checkpoint instead of the latest one can improve the final augmented dataset, but that requires either a patched Nerfstudio installation or an external checkpoint-selection workflow.
+- Carefully selecting the best NeRF checkpoint instead of the latest one can improve the final augmented dataset, but that requires extra infrastructure beyond the default public pipeline.
 - By default, the pipeline keeps all intermediate artifacts for debugging and analysis.
 - `notes_1.txt` is kept as an internal lab notebook and is not part of the public API.
 

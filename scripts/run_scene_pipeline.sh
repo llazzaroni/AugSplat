@@ -30,10 +30,8 @@ NeRF options:
   --nerf-method NAME             nerfacto | depth-nerfacto. Default: nerfacto
   --nerf-max-steps N             Nerfstudio max iterations. Default: 15000
   --nerf-save-every N            Save interval. Default: --nerf-max-steps
-  --nerf-eval-every N            Full-val interval. Default: 200
 
 Augmentation options:
-  --checkpoint-selection MODE    latest | best. Default: latest
   --checkpoint-step N            Force a specific checkpoint step for all ensemble models.
   --camera-id N                  COLMAP camera model id for synthetic views. Default: 1
   --num-final-samples N          Number of synthetic views to keep. Default: 200
@@ -57,9 +55,6 @@ gsplat options:
 
 Cleanup:
   --cleanup-intermediate         Remove derived datasets and NeRF artifacts after gsplat finishes.
-
-Notes:
-  - If --checkpoint-selection best is used, each ensemble run must contain eval_all_images.jsonl.
 EOF
 }
 
@@ -75,9 +70,7 @@ NUM_ENSEMBLES=5
 NERF_METHOD="nerfacto"
 NERF_MAX_STEPS=15000
 NERF_SAVE_EVERY=""
-NERF_EVAL_EVERY=200
 
-CHECKPOINT_SELECTION="latest"
 CHECKPOINT_STEP=""
 CAMERA_ID="1"
 NUM_FINAL_SAMPLES=200
@@ -111,8 +104,6 @@ while [[ $# -gt 0 ]]; do
     --nerf-method) NERF_METHOD="$2"; shift 2 ;;
     --nerf-max-steps) NERF_MAX_STEPS="$2"; shift 2 ;;
     --nerf-save-every) NERF_SAVE_EVERY="$2"; shift 2 ;;
-    --nerf-eval-every) NERF_EVAL_EVERY="$2"; shift 2 ;;
-    --checkpoint-selection) CHECKPOINT_SELECTION="$2"; shift 2 ;;
     --checkpoint-step) CHECKPOINT_STEP="$2"; shift 2 ;;
     --camera-id) CAMERA_ID="$2"; shift 2 ;;
     --num-final-samples) NUM_FINAL_SAMPLES="$2"; shift 2 ;;
@@ -139,7 +130,6 @@ done
 
 [[ -n "$DATA_DIR" ]] || { usage; die "--data-dir is required"; }
 [[ "$NERF_METHOD" == "nerfacto" || "$NERF_METHOD" == "depth-nerfacto" ]] || die "--nerf-method must be nerfacto or depth-nerfacto"
-[[ "$CHECKPOINT_SELECTION" == "latest" || "$CHECKPOINT_SELECTION" == "best" ]] || die "--checkpoint-selection must be latest or best"
 [[ "$SPLAT_MODE" == "staged" || "$SPLAT_MODE" == "dual" ]] || die "--splat-mode must be staged or dual"
 
 DATA_DIR="$(cd "$DATA_DIR" && pwd)"
@@ -232,16 +222,6 @@ all_ensemble_configs_present() {
   return 0
 }
 
-validate_best_checkpoint_support() {
-  local i
-  for ((i=1; i<=NUM_ENSEMBLES; i++)); do
-    local run_dir="${NERF_ROOT}/nerf_ensemble_${i}"
-    local eval_file
-    eval_file="$(find "$run_dir" -path '*/eval_all_images.jsonl' -type f | head -n 1 || true)"
-    [[ -n "$eval_file" ]] || die "--checkpoint-selection best requested, but no eval_all_images.jsonl found under ${run_dir}"
-  done
-}
-
 run_vggt_if_needed() {
   if prepared_dataset_exists "$DATA_DIR"; then
     log "Reusing existing prepared dataset: $DATA_DIR"
@@ -298,8 +278,8 @@ train_nerf_ensemble() {
         --experiment-name "ensemble_${i}" \
         --timestamp "${SCENE_NAME}" \
         --steps-per-save "${NERF_SAVE_EVERY}" \
-        --steps-per-eval-all-images "${NERF_EVAL_EVERY}" \
         --steps-per-eval-image 0 \
+        --steps-per-eval-all-images 0 \
         --max-num-iterations "${NERF_MAX_STEPS}" \
         --save-only-latest-checkpoint True \
         --logging.steps-per-log 100 \
@@ -315,8 +295,8 @@ train_nerf_ensemble() {
         --experiment-name "ensemble_${i}" \
         --timestamp "${SCENE_NAME}" \
         --steps-per-save "${NERF_SAVE_EVERY}" \
-        --steps-per-eval-all-images "${NERF_EVAL_EVERY}" \
         --steps-per-eval-image 0 \
+        --steps-per-eval-all-images 0 \
         --max-num-iterations "${NERF_MAX_STEPS}" \
         --save-only-latest-checkpoint True \
         --logging.steps-per-log 100 \
@@ -340,10 +320,6 @@ augment_dataset() {
 
   [[ ! -e "$AUG_DIR" ]] || die "Augmented dataset path already exists but does not look reusable: $AUG_DIR"
 
-  if [[ "$CHECKPOINT_SELECTION" == "best" ]]; then
-    validate_best_checkpoint_support
-  fi
-
   conda activate "$NERFSTUDIO_ENV"
   pushd "$REPO_ROOT" >/dev/null
 
@@ -351,6 +327,7 @@ augment_dataset() {
     python scripts/augment_dataset.py
     --model-roots "$NERF_ROOT"
     --num-ensembles "$NUM_ENSEMBLES"
+    --checkpoint-selection latest
     --input-dataset "$VGGT_DIR"
     --output-dataset "$AUG_DIR"
     --tmp-root "$TMP_ROOT"
@@ -362,8 +339,6 @@ augment_dataset() {
 
   if [[ -n "$CHECKPOINT_STEP" ]]; then
     cmd+=(--checkpoint-step "$CHECKPOINT_STEP")
-  else
-    cmd+=(--checkpoint-selection "$CHECKPOINT_SELECTION")
   fi
 
   if [[ -n "$CAMERA_ID" ]]; then
