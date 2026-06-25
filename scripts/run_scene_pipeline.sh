@@ -228,15 +228,18 @@ prepared_dataset_exists() {
 
 find_run_config() {
   local run_dir="$1"
-  python - "$run_dir" <<'PY'
-from pathlib import Path
-import sys
-run_dir = Path(sys.argv[1])
-matches = sorted(run_dir.glob("outputs/*/*/*/config.y*ml"))
-if not matches:
-    raise SystemExit(1)
-print(matches[0])
-PY
+  local matches=(
+    "${run_dir}"/outputs/*/*/*/config.yml
+    "${run_dir}"/outputs/*/*/*/config.yaml
+  )
+  local path
+  for path in "${matches[@]}"; do
+    if [[ -f "$path" ]]; then
+      printf '%s\n' "$path"
+      return 0
+    fi
+  done
+  return 1
 }
 
 all_ensemble_configs_present() {
